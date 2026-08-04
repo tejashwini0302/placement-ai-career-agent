@@ -1,1 +1,134 @@
- 
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Placement-Ready AI Career Agent</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <h1>Placement-Ready AI Career Agent</h1>
+      <p>Upload your resume, connect GitHub, and get an ATS score, skill-gap analysis, job recommendations, and a personalized roadmap.</p>
+    </header>
+
+    <section class="glass form-section">
+      <form id="careerForm">
+        <div class="form-grid">
+          <div class="field">
+            <label>Target role</label>
+            <select id="role">
+              <option>Java Developer</option>
+              <option>Full Stack Developer</option>
+              <option>AI Engineer</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>GitHub username</label>
+            <input type="text" id="github" placeholder="tejashwini0302" />
+          </div>
+
+          <div class="field field-full">
+            <label>Resume (PDF)</label>
+            <input type="file" id="resume" accept=".pdf" />
+          </div>
+        </div>
+
+        <button type="submit" class="primary-btn">Analyze my profile</button>
+      </form>
+    </section>
+
+    <section class="dashboard">
+      <div class="cards">
+        <div class="card">
+          <h3>ATS score</h3>
+          <div class="score-circle" id="atsScore">86</div>
+        </div>
+
+        <div class="card">
+          <h3>Placement readiness</h3>
+          <div class="score-circle green" id="readinessScore">81</div>
+        </div>
+
+        <div class="card">
+          <h3>GitHub score</h3>
+          <div class="score-circle blue" id="githubScore">78</div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="glass panel">
+          <h2>Skill gap analysis</h2>
+          <div class="chips" id="skillGap">
+            <span class="chip danger">Docker</span>
+            <span class="chip danger">AWS</span>
+            <span class="chip danger">System Design</span>
+          </div>
+        </div>
+
+        <div class="glass panel">
+          <h2>GitHub evaluation</h2>
+          <ul id="githubEval" class="list">
+            <li>Improve repository README files</li>
+            <li>Pin your best projects</li>
+            <li>Maintain consistent commits</li>
+          </ul>
+        </div>
+
+        <div class="glass panel">
+          <h2>Recommended projects</h2>
+          <ul id="projects" class="list">
+            <li>AI Resume Analyzer</li>
+            <li>Placement Tracker Dashboard</li>
+            <li>Mock Interview Agent</li>
+          </ul>
+        </div>
+
+        <div class="glass panel">
+          <h2>Job recommendations</h2>
+          <div id="jobs" class="jobs">
+            <div class="jobs-item">
+              <h4>TCS Java Developer</h4>
+              <p>Hyderabad • Entry level</p>
+            </div>
+            <div class="jobs-item">
+              <h4>Infosys Full Stack Engineer</h4>
+              <p>Bengaluru • Fresher</p>
+            </div>
+            <div class="jobs-item">
+              <h4>Accenture Associate Software Engineer</h4>
+              <p>Pune • Campus hiring</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass roadmap">
+        <h2>30-day roadmap</h2>
+        <div class="timeline">
+          <div class="step">
+            <span>Week 1</span>
+            <p>Strengthen Java / React fundamentals and GitHub portfolio.</p>
+          </div>
+          <div class="step">
+            <span>Week 2</span>
+            <p>Learn Docker, REST APIs, and deploy a full-stack project.</p>
+          </div>
+          <div class="step">
+            <span>Week 3</span>
+            <p>Practice DSA and system design basics.</p>
+          </div>
+          <div class="step">
+            <span>Week 4</span>
+            <p>Mock interviews, resume refinement, and applications.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
