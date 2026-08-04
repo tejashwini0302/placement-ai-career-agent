@@ -2,10 +2,13 @@ import os
 import json
 import requests
 import uvicorn
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
 from langserve import add_routes
 from langchain_core.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -18,20 +21,32 @@ from duckduckgo_search import DDGS
 # 1. FASTAPI APP
 # -----------------------------
 
-app = FastAPI(
-    title="Placement-Ready AI Career Agent API"
+app = FastAPI(title="Placement-Ready AI Career Agent API")
+
+BASE_DIR = Path(__file__).resolve().parent
+
+app.mount(
+    "/static",
+    StaticFiles(directory=str(BASE_DIR / "static")),
+    name="static"
 )
 
-# Static files and templates
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {}
+    )
 # Homepage
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse(
+        request,
         "index.html",
-        {"request": request}
+        {}
     )
 
 # -----------------------------
