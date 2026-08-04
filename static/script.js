@@ -32,40 +32,13 @@ try {
         throw new Error('Analysis failed');
     }
 
-    const analysis = data.analysis;
+    // Show the analysis on the page instead of an alert
+    document.getElementById('githubEval').innerHTML =
+        `<li>${data.analysis.replace(/\\n/g, '<br>')}</li>`;
 
-    const atsMatch = analysis.match(/ATS score[:\\-]?\\s*(\\d+)/i);
-    const readinessMatch = analysis.match(/Placement readiness score[:\\-]?\\s*(\\d+)/i);
-
-    document.getElementById('atsScore').textContent =
-        atsMatch ? atsMatch[1] : '85';
-
-    document.getElementById('readinessScore').textContent =
-        readinessMatch ? readinessMatch[1] : '82';
-
-    document.getElementById('githubScore').textContent =
-        github ? '80' : '--';
-
-    document.getElementById('githubEval').innerHTML = `
-        <li>GitHub profile analyzed</li>
-        <li>Username: ${github}</li>
-        <li>Portfolio evaluation completed</li>
-    `;
-
-    document.getElementById('projects').innerHTML = `
-        <li>AI Resume Analyzer</li>
-        <li>Placement Tracker Dashboard</li>
-        <li>Career Agent using LangChain</li>
-    `;
-
-    document.getElementById('jobs').innerHTML = `
-        <div class="jobs-item">
-            <h4>${role}</h4>
-            <p>Personalized recommendations generated</p>
-        </div>
-    `;
-
-    alert('Analysis completed successfully!');
+    document.getElementById('atsScore').textContent = 'AI';
+    document.getElementById('readinessScore').textContent = 'AI';
+    document.getElementById('githubScore').textContent = github ? 'AI' : '--';
 
 } catch (err) {
     console.error(err);
