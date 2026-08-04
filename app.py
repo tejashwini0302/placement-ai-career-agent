@@ -4,7 +4,7 @@ import requests
 import uvicorn
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -16,6 +16,8 @@ from langchain.agents import create_agent
 from langchain_core.runnables import RunnableLambda
 from pydantic import BaseModel, Field
 from duckduckgo_search import DDGS
+from pypdf import PdfReader
+from io import BytesIO
 
 # -----------------------------
 # 1. FASTAPI APP
@@ -41,13 +43,49 @@ async def home(request: Request):
         {}
     )
 # Homepage
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse(
-        request,
-        "index.html",
-        {}
-    )
+
+@app.post("/analyze")
+async def analyze(
+    role: str = Form(...),
+    github: str = Form(...),
+    resume: UploadFile = File(...)
+):
+    pdf_bytes = await resume.read()
+    reader = PdfReader(BytesIO(pdf_bytes))
+
+    resume_text = ""
+    for page in reader.pages:
+        resume_text += page.extract_text() or ""
+
+    query = f"""
+Analyze this resume for the role of {role}.
+
+Resume:
+{resume_text}
+
+GitHub username: {github}
+
+Provide:
+1. ATS score
+2. Placement readiness score
+3. Missing skills
+4. GitHub evaluation
+5. Recommended projects
+6. Job opportunities
+"""
+
+    response = await agent.ainvoke({
+        "messages": [
+            ("user", query)
+        ]
+    })
+
+    analysis = extract_text_response(response)
+
+    return {
+        "success": True,
+        "analysis": analysis
+    }
 
 # -----------------------------
 # 2. TOOLS
