@@ -1,11 +1,13 @@
 fastapi
 uvicorn
 langserve[all]
-langchain-google-genai
 langchain
+langchain-google-genai
 langchain-community
 requests
 pydantic
 nest_asyncio
 duckduckgo-search
 ddgs
+jinja2
+python-multipart
