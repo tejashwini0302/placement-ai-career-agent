@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+langserve[all]
+langchain-google-genai
+langchain
+langchain-community
+requests
+pydantic
+nest_asyncio
+duckduckgo-search
+ddgs
