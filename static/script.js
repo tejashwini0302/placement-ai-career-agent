@@ -1,44 +1,66 @@
 document.getElementById('careerForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const role = document.getElementById('role').value;
-  const github = document.getElementById('github').value;
+    const role = document.getElementById('role').value;
+    const github = document.getElementById('github').value;
+    const resumeFile = document.getElementById('resume').files[0];
 
-  // Demo values; replace with your FastAPI response later
-  document.getElementById('atsScore').textContent = '89';
-  document.getElementById('readinessScore').textContent = '84';
-  document.getElementById('githubScore').textContent = github ? '82' : '75';
+    if (!resumeFile) {
+        alert('Please upload your resume PDF');
+        return;
+    }
 
-  document.getElementById('skillGap').innerHTML = `
-    <span class="chip danger">Docker</span>
-    <span class="chip danger">AWS</span>
-    <span class="chip danger">System Design</span>
-  `;
+    const resumeText = await resumeFile.text();
 
-  document.getElementById('projects').innerHTML = `
-    <li>AI Resume Analyzer</li>
-    <li>Placement Tracker Dashboard</li>
-    <li>Career Agent using LangChain</li>
-  `;
+    const query = `
+Analyze my resume for the role of ${role}.
 
-  document.getElementById('jobs').innerHTML = `
-    <div class="jobs-item">
-      <h4>${role} — TCS</h4>
-      <p>Hyderabad • Entry level</p>
-    </div>
-    <div class="jobs-item">
-      <h4>${role} — Infosys</h4>
-      <p>Bengaluru • Fresher</p>
-    </div>
-    <div class="jobs-item">
-      <h4>${role} — Accenture</h4>
-      <p>Pune • Campus hiring</p>
-    </div>
-  `;
+Resume:
+${resumeText}
 
-  document.getElementById('githubEval').innerHTML = `
-    <li>GitHub profile: ${github || 'Not provided'}</li>
-    <li>Improve README and documentation</li>
-    <li>Add deployment links and pinned repositories</li>
-  `;
+GitHub username: ${github}
+
+Give me:
+1. ATS score
+2. Skill gaps
+3. GitHub evaluation
+4. Recommended projects
+5. Job opportunities
+6. Placement readiness score
+`;
+
+    try {
+        const response = await fetch('/career-agent/invoke', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                input: query
+            })
+        });
+
+        const data = await response.json();
+
+        const result = data.output || JSON.stringify(data);
+
+        document.getElementById('atsScore').textContent = '--';
+        document.getElementById('readinessScore').textContent = '--';
+        document.getElementById('githubScore').textContent = '--';
+
+        document.getElementById('githubEval').innerHTML =
+            '<li>Analysis completed</li><li>Check backend response</li>';
+
+        document.getElementById('projects').innerHTML =
+            '<li>AI Resume Analyzer</li><li>Placement Dashboard</li>';
+
+        document.getElementById('jobs').innerHTML =
+            '<div class="jobs-item"><h4>Analysis generated successfully</h4></div>';
+
+        alert(result);
+
+    } catch (err) {
+        console.error(err);
+        alert('Failed to analyze profile');
+    }
 });
