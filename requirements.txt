@@ -11,4 +11,4 @@ duckduckgo-search
 ddgs
 jinja2
 python-multipart
-
+pypdf
