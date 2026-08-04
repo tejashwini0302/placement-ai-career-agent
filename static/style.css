@@ -1,1 +1,117 @@
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:Inter,Arial,sans-serif;
+  background:linear-gradient(135deg,#0f172a,#111827,#1e293b);
+  color:#fff;
+}
+.container{max-width:1200px;margin:auto;padding:30px}
+.hero{text-align:center;padding:40px 20px}
+.hero h1{font-size:3rem;margin-bottom:10px}
+.hero p{color:#cbd5e1;max-width:700px;margin:auto}
 
+.glass{
+  background:rgba(255,255,255,.08);
+  backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:22px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+
+.form-section{padding:24px;margin:30px 0}
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:18px;
+}
+.field{display:flex;flex-direction:column}
+.field-full{grid-column:1/-1}
+label{margin-bottom:8px;color:#e5e7eb}
+input,select{
+  padding:14px 16px;
+  border-radius:14px;
+  border:none;
+  background:#f8fafc;
+  color:#111827;
+}
+.primary-btn{
+  margin-top:20px;
+  width:100%;
+  padding:16px;
+  border:none;
+  border-radius:16px;
+  background:linear-gradient(90deg,#2563eb,#7c3aed);
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.cards{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:20px;
+  margin:30px 0;
+}
+.card{
+  background:#111827;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;
+  padding:24px;
+  text-align:center;
+}
+.score-circle{
+  width:110px;height:110px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:18px auto;font-size:2rem;font-weight:800;
+  background:radial-gradient(circle,#3b82f6,#1d4ed8);
+}
+.score-circle.green{background:radial-gradient(circle,#22c55e,#15803d)}
+.score-circle.blue{background:radial-gradient(circle,#06b6d4,#2563eb)}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:20px;
+}
+.panel{padding:24px}
+.panel h2{margin-bottom:16px}
+.chips{display:flex;gap:10px;flex-wrap:wrap}
+.chip{
+  padding:10px 14px;
+  border-radius:999px;
+  font-size:.9rem;
+  background:rgba(255,255,255,.1);
+}
+.chip.danger{background:#7f1d1d}
+.list{list-style:none;display:grid;gap:10px;color:#e5e7eb}
+.jobs{display:grid;gap:14px}
+.jobs-item{
+  padding:16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.06);
+}
+.jobs-item p{color:#cbd5e1;margin-top:6px}
+
+.roadmap{margin-top:30px;padding:24px}
+.timeline{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+}
+.step{
+  background:rgba(255,255,255,.06);
+  border-radius:18px;
+  padding:18px;
+}
+.step span{
+  display:inline-block;
+  margin-bottom:10px;
+  font-weight:700;
+  color:#93c5fd;
+}
+
+@media(max-width:900px){
+  .cards{grid-template-columns:1fr}
+  .grid{grid-template-columns:1fr}
+  .timeline{grid-template-columns:1fr}
+  .hero h1{font-size:2.2rem}
+}
