@@ -2,7 +2,10 @@ import os
 import json
 import requests
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from langserve import add_routes
 from langchain_core.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -12,7 +15,27 @@ from pydantic import BaseModel, Field
 from duckduckgo_search import DDGS
 
 # -----------------------------
-# 1. TOOLS
+# 1. FASTAPI APP
+# -----------------------------
+
+app = FastAPI(
+    title="Placement-Ready AI Career Agent API"
+)
+
+# Static files and templates
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+# Homepage
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request}
+    )
+
+# -----------------------------
+# 2. TOOLS
 # -----------------------------
 
 @tool
@@ -54,7 +77,6 @@ def analyze_resume(resume_text: str, role: str) -> str:
 
     return json.dumps(result, indent=2)
 
-
 @tool
 def skill_gap(role: str, resume_text: str) -> str:
     """Identify missing skills for the target role."""
@@ -79,7 +101,6 @@ def skill_gap(role: str, resume_text: str) -> str:
         indent=2
     )
 
-
 @tool
 def search_jobs(role: str) -> str:
     """Search current job openings for a target role."""
@@ -88,7 +109,7 @@ def search_jobs(role: str) -> str:
         with DDGS() as ddgs:
             results = list(
                 ddgs.text(
-                    f"India {role} jobs 2026",
+                    f"India {role} jobs",
                     max_results=5
                 )
             )
@@ -114,7 +135,6 @@ def search_jobs(role: str) -> str:
             ],
             indent=2
         )
-
 
 @tool
 def github_check(username: str) -> str:
@@ -146,7 +166,6 @@ def github_check(username: str) -> str:
     except Exception:
         return "Unable to analyze GitHub profile."
 
-
 @tool
 def recommend_projects(role: str) -> str:
     """Recommend placement-ready projects for the target role."""
@@ -177,7 +196,6 @@ def recommend_projects(role: str) -> str:
         indent=2
     )
 
-
 tools = [
     analyze_resume,
     skill_gap,
@@ -187,7 +205,7 @@ tools = [
 ]
 
 # -----------------------------
-# 2. MODEL & AGENT
+# 3. MODEL & AGENT
 # -----------------------------
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
@@ -210,14 +228,14 @@ agent = create_agent(
 )
 
 # -----------------------------
-# 3. INPUT SCHEMA
+# 4. INPUT SCHEMA
 # -----------------------------
 
 class AgentInput(BaseModel):
     input: str = Field(description="Career-related query for the agent")
 
 # -----------------------------
-# 4. CHAIN
+# 5. CHAIN
 # -----------------------------
 
 def format_for_agent(x):
@@ -252,12 +270,8 @@ formatted_agent_chain = (
 )
 
 # -----------------------------
-# 5. FASTAPI
+# 6. LANGSERVE ROUTE
 # -----------------------------
-
-app = FastAPI(
-    title="Placement-Ready AI Career Agent API"
-)
 
 add_routes(
     app,
@@ -267,7 +281,7 @@ add_routes(
 )
 
 # -----------------------------
-# 6. MAIN
+# 7. MAIN
 # -----------------------------
 
 if __name__ == "__main__":
