@@ -8,7 +8,6 @@ requests
 pydantic
 nest_asyncio
 duckduckgo-search
-ddgs
 jinja2
 python-multipart
 pypdf
