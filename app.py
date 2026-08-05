@@ -57,34 +57,50 @@ async def analyze(
     for page in reader.pages:
         resume_text += page.extract_text() or ""
 
-    query = f"""
-Analyze this resume for the role of {role}.
+    # ATS analysis
+    ats_result = json.loads(analyze_resume.invoke({
+        "resume_text": resume_text,
+        "role": role
+    }))
 
-Resume:
-{resume_text}
+    # Skill gap
+    gap_result = json.loads(skill_gap.invoke({
+        "role": role,
+        "resume_text": resume_text
+    }))
 
-GitHub username: {github}
-
-Provide:
-1. ATS score
-2. Placement readiness score
-3. Missing skills
-4. GitHub evaluation
-5. Recommended projects
-6. Job opportunities
-"""
-
-    response = await agent.ainvoke({
-        "messages": [
-            ("user", query)
-        ]
+    # GitHub
+    github_result = github_check.invoke({
+        "username": github
     })
 
-    analysis = extract_text_response(response)
+    try:
+        github_result = json.loads(github_result)
+        github_score = github_result.get("github_score", 0)
+        github_recommendations = github_result.get("recommendations", [])
+    except Exception:
+        github_score = 0
+        github_recommendations = ["GitHub profile not found"]
+
+    # Projects
+    project_result = json.loads(recommend_projects.invoke({
+        "role": role
+    }))
+
+    # Jobs
+    jobs_result = json.loads(search_jobs.invoke({
+        "role": role
+    }))
 
     return {
         "success": True,
-        "analysis": analysis
+        "ats_score": ats_result["ats_score"],
+        "placement_readiness": min(100, ats_result["ats_score"] + 5),
+        "github_score": github_score,
+        "missing_skills": gap_result["missing_skills"],
+        "github_recommendations": github_recommendations,
+        "projects": project_result["recommended_projects"],
+        "jobs": jobs_result
     }
 
 # -----------------------------
