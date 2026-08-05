@@ -1,11 +1,13 @@
 import os
 import json
+import asyncio
 import requests
 import uvicorn
 from pathlib import Path
+from io import BytesIO
 
 from fastapi import FastAPI, Request, UploadFile, File, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -17,7 +19,6 @@ from langchain_core.runnables import RunnableLambda
 from pydantic import BaseModel, Field
 from duckduckgo_search import DDGS
 from pypdf import PdfReader
-from io import BytesIO
 
 # -----------------------------
 # 1. FASTAPI APP
@@ -35,6 +36,7 @@ app.mount(
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse(
@@ -44,64 +46,6 @@ async def home(request: Request):
     )
 # Homepage
 
-@app.post("/analyze")
-async def analyze(
-    role: str = Form(...),
-    github: str = Form(...),
-    resume: UploadFile = File(...)
-):
-    pdf_bytes = await resume.read()
-    reader = PdfReader(BytesIO(pdf_bytes))
-
-    resume_text = ""
-    for page in reader.pages:
-        resume_text += page.extract_text() or ""
-
-    # ATS analysis
-    ats_result = json.loads(analyze_resume.invoke({
-        "resume_text": resume_text,
-        "role": role
-    }))
-
-    # Skill gap
-    gap_result = json.loads(skill_gap.invoke({
-        "role": role,
-        "resume_text": resume_text
-    }))
-
-    # GitHub
-    github_result = github_check.invoke({
-        "username": github
-    })
-
-    try:
-        github_result = json.loads(github_result)
-        github_score = github_result.get("github_score", 0)
-        github_recommendations = github_result.get("recommendations", [])
-    except Exception:
-        github_score = 0
-        github_recommendations = ["GitHub profile not found"]
-
-    # Projects
-    project_result = json.loads(recommend_projects.invoke({
-        "role": role
-    }))
-
-    # Jobs
-    jobs_result = json.loads(search_jobs.invoke({
-        "role": role
-    }))
-
-    return {
-        "success": True,
-        "ats_score": ats_result["ats_score"],
-        "placement_readiness": min(100, ats_result["ats_score"] + 5),
-        "github_score": github_score,
-        "missing_skills": gap_result["missing_skills"],
-        "github_recommendations": github_recommendations,
-        "projects": project_result["recommended_projects"],
-        "jobs": jobs_result
-    }
 
 # -----------------------------
 # 2. TOOLS
@@ -146,6 +90,7 @@ def analyze_resume(resume_text: str, role: str) -> str:
 
     return json.dumps(result, indent=2)
 
+
 @tool
 def skill_gap(role: str, resume_text: str) -> str:
     """Identify missing skills for the target role."""
@@ -170,70 +115,6 @@ def skill_gap(role: str, resume_text: str) -> str:
         indent=2
     )
 
-@tool
-def search_jobs(role: str) -> str:
-    """Search current job openings for a target role."""
-
-    try:
-        with DDGS() as ddgs:
-            results = list(
-                ddgs.text(
-                    f"India {role} jobs",
-                    max_results=5
-                )
-            )
-
-        jobs = []
-
-        for r in results:
-            jobs.append(
-                {
-                    "title": r.get("title", "N/A"),
-                    "url": r.get("href", "")
-                }
-            )
-
-        return json.dumps(jobs, indent=2)
-
-    except Exception:
-        return json.dumps(
-            [
-                {"title": "TCS Java Developer"},
-                {"title": "Infosys Software Engineer"},
-                {"title": "Accenture Full Stack Developer"}
-            ],
-            indent=2
-        )
-
-@tool
-def github_check(username: str) -> str:
-    """Analyze a GitHub profile using the GitHub public API."""
-
-    try:
-        url = f"https://api.github.com/users/{username}"
-        data = requests.get(url).json()
-
-        if "login" not in data:
-            return f"GitHub user {username} not found."
-
-        score = min(100, 50 + data.get("public_repos", 0) * 2)
-
-        result = {
-            "username": username,
-            "public_repositories": data.get("public_repos", 0),
-            "followers": data.get("followers", 0),
-            "github_score": score,
-            "recommendations": [
-                "Improve repository README files",
-                "Pin your best projects",
-                "Maintain consistent commits"
-            ]
-        }
-
-        return json.dumps(result, indent=2)
-
-    except Exception:
-        return "Unable to analyze GitHub profile."
 
 @tool
 def recommend_projects(role: str) -> str:
@@ -265,6 +146,80 @@ def recommend_projects(role: str) -> str:
         indent=2
     )
 
+
+# ---- Network-bound helpers (used by both the /analyze endpoint and the agent tools) ----
+# These are plain, synchronous functions with EXPLICIT TIMEOUTS. The /analyze endpoint
+# runs them in a thread pool via asyncio.to_thread + asyncio.wait_for so a slow/blocked
+# GitHub API or DuckDuckGo call can never hang the whole request.
+
+def _github_check_sync(username: str) -> dict:
+    try:
+        url = f"https://api.github.com/users/{username}"
+        resp = requests.get(url, timeout=5)
+        data = resp.json()
+
+        if "login" not in data:
+            return {
+                "username": username,
+                "github_score": 0,
+                "recommendations": [f"GitHub user '{username}' not found."]
+            }
+
+        score = min(100, 50 + data.get("public_repos", 0) * 2)
+
+        return {
+            "username": username,
+            "public_repositories": data.get("public_repos", 0),
+            "followers": data.get("followers", 0),
+            "github_score": score,
+            "recommendations": [
+                "Improve repository README files",
+                "Pin your best projects",
+                "Maintain consistent commits"
+            ]
+        }
+
+    except Exception:
+        return {
+            "username": username,
+            "github_score": 0,
+            "recommendations": ["Unable to reach GitHub right now. Try again shortly."]
+        }
+
+
+def _search_jobs_sync(role: str) -> list:
+    fallback = [
+        {"title": "TCS Java Developer", "url": ""},
+        {"title": "Infosys Software Engineer", "url": ""},
+        {"title": "Accenture Full Stack Developer", "url": ""}
+    ]
+    try:
+        with DDGS(timeout=5) as ddgs:
+            results = list(ddgs.text(f"India {role} jobs", max_results=5))
+
+        jobs = [
+            {"title": r.get("title", "N/A"), "url": r.get("href", "")}
+            for r in results
+        ]
+
+        return jobs if jobs else fallback
+
+    except Exception:
+        return fallback
+
+
+@tool
+def github_check(username: str) -> str:
+    """Analyze a GitHub profile using the GitHub public API."""
+    return json.dumps(_github_check_sync(username), indent=2)
+
+
+@tool
+def search_jobs(role: str) -> str:
+    """Search current job openings for a target role."""
+    return json.dumps(_search_jobs_sync(role), indent=2)
+
+
 tools = [
     analyze_resume,
     skill_gap,
@@ -273,14 +228,87 @@ tools = [
     recommend_projects
 ]
 
+
 # -----------------------------
-# 3. MODEL & AGENT
+# 3. /analyze ENDPOINT
+# -----------------------------
+
+@app.post("/analyze")
+async def analyze(
+    role: str = Form(...),
+    github: str = Form(...),
+    resume: UploadFile = File(...)
+):
+    try:
+        pdf_bytes = await resume.read()
+        reader = PdfReader(BytesIO(pdf_bytes))
+
+        resume_text = ""
+        for page in reader.pages:
+            resume_text += page.extract_text() or ""
+
+        # Fast, local, deterministic tools - safe to call directly
+        ats_result = json.loads(analyze_resume.invoke({
+            "resume_text": resume_text,
+            "role": role
+        }))
+
+        gap_result = json.loads(skill_gap.invoke({
+            "role": role,
+            "resume_text": resume_text
+        }))
+
+        project_result = json.loads(recommend_projects.invoke({
+            "role": role
+        }))
+
+        # Network-bound calls: run off the event loop with a hard timeout each,
+        # so a slow GitHub API or blocked DuckDuckGo search can never hang the request.
+        try:
+            github_result = await asyncio.wait_for(
+                asyncio.to_thread(_github_check_sync, github),
+                timeout=8
+            )
+        except asyncio.TimeoutError:
+            github_result = {
+                "github_score": 0,
+                "recommendations": ["GitHub check timed out."]
+            }
+
+        try:
+            jobs_result = await asyncio.wait_for(
+                asyncio.to_thread(_search_jobs_sync, role),
+                timeout=8
+            )
+        except asyncio.TimeoutError:
+            jobs_result = [{"title": "Job search timed out - try again", "url": ""}]
+
+        return {
+            "success": True,
+            "ats_score": ats_result["ats_score"],
+            "placement_readiness": min(100, ats_result["ats_score"] + 5),
+            "github_score": github_result.get("github_score", 0),
+            "missing_skills": gap_result["missing_skills"],
+            "github_recommendations": github_result.get("recommendations", []),
+            "projects": project_result["recommended_projects"],
+            "jobs": jobs_result
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+
+# -----------------------------
+# 4. MODEL & AGENT (used only by the optional /career-agent LangServe route)
 # -----------------------------
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 
 llm = ChatGoogleGenerativeAI(
-    model="gemma-4-31b-it",
+    model="gemini-2.0-flash",
     api_key=GOOGLE_API_KEY,
     temperature=0
 )
@@ -297,19 +325,20 @@ agent = create_agent(
 )
 
 # -----------------------------
-# 4. INPUT SCHEMA
+# 5. INPUT SCHEMA
 # -----------------------------
 
 class AgentInput(BaseModel):
     input: str = Field(description="Career-related query for the agent")
 
 # -----------------------------
-# 5. CHAIN
+# 6. CHAIN
 # -----------------------------
 
 def format_for_agent(x):
     user_input = x["input"] if isinstance(x, dict) else x.input
     return {"messages": [("user", user_input)]}
+
 
 def extract_text_response(agent_output: dict) -> str:
     if not isinstance(agent_output, dict):
@@ -329,6 +358,7 @@ def extract_text_response(agent_output: dict) -> str:
 
     return str(agent_output)
 
+
 formatted_agent_chain = (
     RunnableLambda(format_for_agent)
     | agent
@@ -339,7 +369,7 @@ formatted_agent_chain = (
 )
 
 # -----------------------------
-# 6. LANGSERVE ROUTE
+# 7. LANGSERVE ROUTE
 # -----------------------------
 
 add_routes(
@@ -350,7 +380,7 @@ add_routes(
 )
 
 # -----------------------------
-# 7. MAIN
+# 8. MAIN
 # -----------------------------
 
 if __name__ == "__main__":
