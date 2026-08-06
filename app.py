@@ -276,16 +276,18 @@ Be specific to this resume and role. Avoid generic filler advice."""
 
 async def _safe_github(username: str) -> dict:
     try:
-        return await asyncio.wait_for(asyncio.to_thread(_github_check_sync, username), timeout=8)
-    except Exception:
+        return await asyncio.wait_for(asyncio.to_thread(_github_check_sync, username), timeout=6)
+    except Exception as e:
+        print(f"[github] failed/timed out: {e}", flush=True)
         return {"username": username, "github_score": 0, "public_repositories": 0,
                 "followers": 0, "recommendations": ["GitHub check timed out."]}
 
 
 async def _safe_jobs(role: str) -> list:
     try:
-        return await asyncio.wait_for(asyncio.to_thread(_search_jobs_sync, role), timeout=8)
-    except Exception:
+        return await asyncio.wait_for(asyncio.to_thread(_search_jobs_sync, role), timeout=6)
+    except Exception as e:
+        print(f"[jobs] failed/timed out: {e}", flush=True)
         return [{"title": "Job search timed out - try again", "url": ""}]
 
 
@@ -293,9 +295,10 @@ async def _safe_llm(resume_text: str, role: str, github_stats: dict):
     try:
         return await asyncio.wait_for(
             asyncio.to_thread(_llm_analyze_sync, resume_text, role, github_stats),
-            timeout=20
+            timeout=15
         )
-    except Exception:
+    except Exception as e:
+        print(f"[llm] failed/timed out: {type(e).__name__}: {e}", flush=True)
         return None
 
 
@@ -306,6 +309,8 @@ async def analyze(
     resume: UploadFile = File(...)
 ):
     try:
+        print(f"[analyze] START role={role} github={github}", flush=True)
+
         pdf_bytes = await resume.read()
         reader = PdfReader(BytesIO(pdf_bytes))
 
@@ -313,7 +318,10 @@ async def analyze(
         for page in reader.pages:
             resume_text += page.extract_text() or ""
 
+        print(f"[analyze] PDF parsed, {len(resume_text)} chars extracted", flush=True)
+
         if not resume_text.strip():
+            print("[analyze] ABORT: no text extracted from PDF", flush=True)
             return JSONResponse(
                 status_code=400,
                 content={
@@ -327,14 +335,18 @@ async def analyze(
         rule_ats = json.loads(analyze_resume.invoke({"resume_text": resume_text, "role": role}))
         rule_gap = json.loads(skill_gap.invoke({"role": role, "resume_text": resume_text}))
         rule_projects = json.loads(recommend_projects.invoke({"role": role}))
+        print("[analyze] rule-based fallback results computed", flush=True)
 
-        # First get real GitHub stats (needed as context for the LLM), then run the LLM
-        # call and job search in parallel.
+        print("[analyze] calling GitHub API...", flush=True)
         github_result = await _safe_github(github)
+        print(f"[analyze] GitHub done: score={github_result.get('github_score')}", flush=True)
+
+        print(f"[analyze] LLM configured: {llm is not None}. Starting LLM + job search in parallel...", flush=True)
         llm_result, jobs_result = await asyncio.gather(
             _safe_llm(resume_text, role, github_result),
             _safe_jobs(role)
         )
+        print(f"[analyze] LLM result present: {llm_result is not None}. Jobs found: {len(jobs_result)}", flush=True)
 
         if llm_result:
             ats_score = int(llm_result.get("ats_score", rule_ats["ats_score"]))
