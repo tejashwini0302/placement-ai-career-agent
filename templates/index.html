@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -27,7 +27,7 @@
 
           <div class="field">
             <label>GitHub username</label>
-            <input type="text" id="github" placeholder="tejashwini0302" />
+            <input type="text" id="github" placeholder="e.g. octocat" />
           </div>
 
           <div class="field field-full">
@@ -37,95 +37,61 @@
         </div>
 
         <button type="submit" class="primary-btn">Analyze my profile</button>
+        <p id="formError" class="error-text" hidden></p>
       </form>
     </section>
 
-    <section class="dashboard">
+    <section class="dashboard" id="resultsSection" hidden>
       <div class="cards">
         <div class="card">
           <h3>ATS score</h3>
           <div class="score-circle" id="atsScore">--</div>
+          <p class="score-note" id="atsNote"></p>
         </div>
 
         <div class="card">
           <h3>Placement readiness</h3>
           <div class="score-circle green" id="readinessScore">--</div>
+          <p class="score-note">Weighted from ATS score (60%) and GitHub activity (40%)</p>
         </div>
 
         <div class="card">
           <h3>GitHub score</h3>
           <div class="score-circle blue" id="githubScore">--</div>
+          <p class="score-note" id="githubNote"></p>
         </div>
       </div>
 
       <div class="grid">
         <div class="glass panel">
           <h2>Skill gap analysis</h2>
-          <div class="chips" id="skillGap">
-            <span class="chip danger">Docker</span>
-            <span class="chip danger">AWS</span>
-            <span class="chip danger">System Design</span>
-          </div>
+          <div class="chips" id="skillGap"></div>
         </div>
 
         <div class="glass panel">
           <h2>GitHub evaluation</h2>
-          <ul id="githubEval" class="list">
-            <li>Improve repository README files</li>
-            <li>Pin your best projects</li>
-            <li>Maintain consistent commits</li>
-          </ul>
+          <ul id="githubEval" class="list"></ul>
         </div>
 
         <div class="glass panel">
           <h2>Recommended projects</h2>
-          <ul id="projects" class="list">
-            <li>AI Resume Analyzer</li>
-            <li>Placement Tracker Dashboard</li>
-            <li>Mock Interview Agent</li>
-          </ul>
+          <ul id="projects" class="list"></ul>
         </div>
 
         <div class="glass panel">
           <h2>Job recommendations</h2>
-          <div id="jobs" class="jobs">
-            <div class="jobs-item">
-              <h4>TCS Java Developer</h4>
-              <p>Hyderabad • Entry level</p>
-            </div>
-            <div class="jobs-item">
-              <h4>Infosys Full Stack Engineer</h4>
-              <p>Bengaluru • Fresher</p>
-            </div>
-            <div class="jobs-item">
-              <h4>Accenture Associate Software Engineer</h4>
-              <p>Pune • Campus hiring</p>
-            </div>
-          </div>
+          <div id="jobs" class="jobs"></div>
         </div>
       </div>
 
       <div class="glass roadmap">
         <h2>30-day roadmap</h2>
-        <div class="timeline">
-          <div class="step">
-            <span>Week 1</span>
-            <p>Strengthen Java / React fundamentals and GitHub portfolio.</p>
-          </div>
-          <div class="step">
-            <span>Week 2</span>
-            <p>Learn Docker, REST APIs, and deploy a full-stack project.</p>
-          </div>
-          <div class="step">
-            <span>Week 3</span>
-            <p>Practice DSA and system design basics.</p>
-          </div>
-          <div class="step">
-            <span>Week 4</span>
-            <p>Mock interviews, resume refinement, and applications.</p>
-          </div>
-        </div>
+        <div class="timeline" id="roadmapTimeline"></div>
       </div>
+    </section>
+
+    <section class="glass empty-state" id="emptyState">
+      <p>No analysis yet. Fill in the form above and click <strong>Analyze my profile</strong> to see your ATS score, skill gaps, project ideas, and a personalized roadmap here.</p>
     </section>
   </div>
 
