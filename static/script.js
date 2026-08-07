@@ -61,8 +61,11 @@ function renderResults(data) {
     document.getElementById('readinessScore').textContent = data.placement_readiness;
 
     document.getElementById('githubScore').textContent = data.github_score;
+    const langs = (data.github_top_languages && data.github_top_languages.length)
+        ? ` - ${data.github_top_languages.join(', ')}`
+        : '';
     document.getElementById('githubNote').textContent =
-        `${data.github_public_repos || 0} public repos - ${data.github_followers || 0} followers`;
+        `${data.github_public_repos || 0} public repos - ${data.github_followers || 0} followers${langs}`;
 
     const skillGap = document.getElementById('skillGap');
     skillGap.innerHTML = (data.missing_skills && data.missing_skills.length)
@@ -81,11 +84,15 @@ function renderResults(data) {
 
     const jobs = document.getElementById('jobs');
     jobs.innerHTML = (data.jobs && data.jobs.length)
-        ? data.jobs.map(job => `
+        ? data.jobs.map(job => {
+            const meta = [job.company, job.location].filter(Boolean).join(' - ');
+            return `
             <div class="jobs-item">
                 <h4>${escapeHtml(job.title)}</h4>
+                ${meta ? `<p>${escapeHtml(meta)}</p>` : ''}
                 ${job.url ? `<a href="${job.url}" target="_blank" rel="noopener">Apply</a>` : ''}
-            </div>`).join('')
+            </div>`;
+          }).join('')
         : '<p class="muted">No jobs found right now.</p>';
 
     const roadmap = document.getElementById('roadmapTimeline');
